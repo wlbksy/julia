@@ -30,21 +30,24 @@ string(xs...) = print_to_string(xs...)
 
 bytestring() = ""
 bytestring(s::Array{Uint8,1}) = bytestring(pointer(s),length(s))
+bytestring(s::Array{Int8,1}) = bytestring(pointer(s),length(s))
 bytestring(s::String...) = print_to_string(s...)
 
-function bytestring(p::Ptr{Uint8})
+function bytestring{T<:Union(Int8,Uint8)}(p::Ptr{T})
     p == C_NULL ? error("cannot convert NULL to string") :
-    ccall(:jl_cstr_to_string, ByteString, (Ptr{Uint8},), p)
+    ccall(:jl_cstr_to_string, ByteString, (Ptr{T},), p)
 end
 
-function bytestring(p::Ptr{Uint8},len::Int)
+function bytestring{T<:Union(Int8,Uint8)}(p::Ptr{T},len::Int)
     p == C_NULL ? error("cannot convert NULL to string") :
-    ccall(:jl_pchar_to_string, ByteString, (Ptr{Uint8},Int), p, len)
+    ccall(:jl_pchar_to_string, ByteString, (Ptr{T},Int), p, len)
 end
 
-convert(::Type{Array{Uint8,1}}, s::String) = bytestring(s).data
-convert(::Type{Array{Uint8}}, s::String) = bytestring(s).data
 convert(::Type{ByteString}, s::String) = bytestring(s)
+convert(::Type{Array{Uint8}}, s::String) = bytestring(s).data
+convert(::Type{Array{Uint8,1}}, s::String) = bytestring(s).data
+convert(::Type{Array{Int8}}, s::String) = reinterpret(Int8,bytestring(s).data)
+convert(::Type{Array{Int8,1}}, s::String) = reinterpret(Int8,bytestring(s).data)
 
 ## generic supplied functions ##
 
@@ -263,8 +266,8 @@ ends_with(a::String, c::Char) = !isempty(a) && a[end] == c
 cmp(a::ByteString, b::ByteString)     = cmp(a.data, b.data)
 isequal(a::ByteString, b::ByteString) = endof(a)==endof(b) && cmp(a,b)==0
 begins_with(a::ByteString, b::ByteString) = begins_with(a.data, b.data)
-
-begins_with(a::Array{Uint8,1}, b::Array{Uint8,1}) = (length(a) >= length(b) && ccall(:strncmp, Int32, (Ptr{Uint8}, Ptr{Uint8}, Uint), a, b, length(b)) == 0)
+begins_with{T<:Union(Int8,Uint8)}(a::Array{T,1}, b::Array{T,1}) =
+    (length(a) >= length(b) && ccall(:strncmp, Int32, (Ptr{T}, Ptr{T}, Uint), a, b, length(b)) == 0)
 
 # TODO: fast ends_with
 
@@ -599,15 +602,15 @@ unescape_string(s::String) = sprint(endof(s), print_unescaped, s)
 
 ## checking UTF-8 & ACSII validity ##
 
-byte_string_classify(data::Array{Uint8,1}) =
-    ccall(:u8_isvalid, Int32, (Ptr{Uint8}, Int), data, length(data))
+byte_string_classify{T<:Union(Int8,Uint8)}(data::Array{T,1}) =
+    ccall(:u8_isvalid, Int32, (Ptr{T}, Int), data, length(data))
 byte_string_classify(s::ByteString) = byte_string_classify(s.data)
     # 0: neither valid ASCII nor UTF-8
     # 1: valid ASCII
     # 2: valid UTF-8
 
-is_valid_ascii(s::Union(Array{Uint8,1},ByteString)) = byte_string_classify(s) == 1
-is_valid_utf8 (s::Union(Array{Uint8,1},ByteString)) = byte_string_classify(s) != 0
+is_valid_ascii{T<:Union(Int8,Uint8)}(s::Union(Array{T,1},ByteString)) = byte_string_classify(s) == 1
+is_valid_utf8 {T<:Union(Int8,Uint8)}(s::Union(Array{T,1},ByteString)) = byte_string_classify(s) != 0
 
 ## multiline strings ##
 
@@ -1189,15 +1192,15 @@ end
 
 # find the index of the first occurrence of a value in a byte array
 
-function search(a::Array{Uint8,1}, b, i::Integer)
+function search{T<:Union(Int8,Uint8)}(a::Array{T,1}, b, i::Integer)
     if i < 1 error(BoundsError) end
     n = length(a)
     if i > n return i == n+1 ? 0 : error(BoundsError) end
     p = pointer(a)
-    q = ccall(:memchr, Ptr{Uint8}, (Ptr{Uint8}, Int32, Uint), p+i-1, b, n-i+1)
+    q = ccall(:memchr, Ptr{T}, (Ptr{T}, Int32, Uint), p+i-1, b, n-i+1)
     q == C_NULL ? 0 : int(q-p+1)
 end
-search(a::Array{Uint8,1}, b) = search(a,b,1)
+search{T<:Union(Int8,Uint8)}(a::Array{T,1}, b) = search(a,b,1)
 
 # return a random string (often useful for temporary filenames/dirnames)
 let

@@ -108,4 +108,5 @@ utf8(x) = convert(UTF8String, x)
 convert(::Type{UTF8String}, s::UTF8String) = s
 convert(::Type{UTF8String}, s::ASCIIString) = UTF8String(s.data)
 convert(::Type{UTF8String}, a::Array{Uint8,1}) = is_valid_utf8(a) ? UTF8String(a) : error("invalid UTF-8 sequence")
+convert(::Type{ASCIIString}, a::Array{Int8,1}) = utf8(reinterpret(Uint8,a))
 convert(::Type{UTF8String}, s::String) = utf8(bytestring(s))

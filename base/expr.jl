@@ -3,15 +3,17 @@
 symbol(s::Symbol) = s
 symbol(s::ASCIIString) = symbol(s.data)
 symbol(s::UTF8String) = symbol(s.data)
+symbol(a::Array{Int8,1}) = symbol(reinterpret(Uint8,a))
 symbol(a::Array{Uint8,1}) =
     ccall(:jl_symbol_n, Any, (Ptr{Uint8}, Int32), a, length(a))::Symbol
 
 gensym() = ccall(:jl_gensym, Any, ())::Symbol
-
 gensym(s::ASCIIString) = gensym(s.data)
 gensym(s::UTF8String) = gensym(s.data)
+gensym(a::Array{Int8,1}) = gensym(reinterpret(Uint8,a))
 gensym(a::Array{Uint8,1}) =
     ccall(:jl_tagged_gensym, Any, (Ptr{Uint8}, Int32), a, length(a))::Symbol
+
 gensym(ss::Union(ASCIIString, UTF8String)...) = map(gensym, ss)
 
 macro gensym(names...)

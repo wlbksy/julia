@@ -14,9 +14,9 @@ convert{T}(::Type{Ptr{T}}, p::Ptr{T}) = p
 convert{T}(::Type{Ptr{T}}, p::Ptr) = box(Ptr{T}, unbox(Ptr,p))
 
 # object to pointer
-convert(::Type{Ptr{Uint8}}, x::Symbol) = ccall(:jl_symbol_name, Ptr{Uint8}, (Any,), x)
 convert{T}(::Type{Ptr{T}}, a::Array) = ccall(:jl_array_ptr, Ptr{T}, (Any,), a)
-convert(::Type{Ptr{Uint8}}, s::ByteString) = convert(Ptr{Uint8}, s.data)
+convert{T<:Union(Int8,Uint8)}(::Type{Ptr{T}}, x::Symbol) = ccall(:jl_symbol_name, Ptr{T}, (Any,), x)
+convert{T<:Union(Int8,Uint8)}(::Type{Ptr{T}}, s::ByteString) = convert(Ptr{T}, s.data)
 
 pointer{T}(::Type{T}, x::Uint) = convert(Ptr{T}, x)
 pointer{T}(::Type{T}, x::Ptr) = convert(Ptr{T}, x)
