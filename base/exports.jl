@@ -1136,6 +1136,12 @@ export
     unsafe_assign,
     unsafe_pointer_to_objref,
     pointer_from_objref,
+    
+# Profiling
+    sprofile_flat,
+    sprofile_tree,
+    sprofile_init,
+    sprofile_clear,
 
 # Macros
     @b_str,
@@ -1168,4 +1174,5 @@ export
     @vectorize_2arg,
     @show,
     @printf,
-    @sprintf
+    @sprintf,
+    @sprofile

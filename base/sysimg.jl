@@ -141,13 +141,14 @@ include("combinatorics.jl")
 include("darray2.jl")
 include("mmap.jl")
 
-# utilities - version, timing, help, edit, metaprogramming
+# utilities - version, timing, help, edit, metaprogramming, profiling
 include("version.jl")
 include("datafmt.jl")
 include("deepcopy.jl")
 include("util.jl")
 include("test.jl")
 include("meta.jl")
+include("sprofile.jl")
 
 # sparse matrices and linear algebra
 include("sparse.jl")

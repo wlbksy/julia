@@ -226,6 +226,13 @@
     jl_readBuffer;
     jl_readdir;
     jl_readuntil;
+    jl_sprofile_clear_data;
+    jl_sprofile_get_data;
+    jl_sprofile_len_data;
+    jl_sprofile_maxlen_data;
+    jl_sprofile_init;
+    jl_sprofile_start_timer;
+    jl_sprofile_stop_timer;
     jl_throw;
     jl_rethrow;
     jl_rethrow_other;
