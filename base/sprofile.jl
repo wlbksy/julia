@@ -127,11 +127,12 @@ function sprofile_flat(io::IO, doCframes::Bool, mergelines::Bool, cols::Int)
         println(io, lpad(string(n[i]), wcounts, " "), " ", rpad(truncto(thisbt[2], wfile), wfile, " "), " ", rpad(truncto(thisbt[1], wfun), wfun, " "), " ", lpad(string(thisbt[3]), wline, " "))
     end
 end
-sprofile_flat(io::IO) = sprofile_flat(io, false, false, tty_cols())
+sprofile_flat(io::IO) = sprofile_flat(io, false, true, tty_cols())
 sprofile_flat() = sprofile_flat(OUTPUT_STREAM)
 sprofile_flat(doCframes::Bool, mergelines::Bool) = sprofile_flat(OUTPUT_STREAM, doCframes,  mergelines, tty_cols())
 
 ## A tree representation
+# Identify and counts repetitions of all unique captures
 function sprof_tree()
     data = sprofile_get()
     iz = find(data .== 0)  # find the breaks between captures
@@ -151,6 +152,7 @@ function sprof_tree()
     bt, counts
 end
 
+# Find all captures that begin with a particular pattern
 function sprof_treematch(bt::Vector{Vector{Uint}}, counts::Vector{Int}, pattern::Vector{Uint})
     l = length(pattern)
     n = length(counts)
@@ -203,48 +205,72 @@ function sprof_tree_format(infoa::Vector{Any}, counts::Vector{Int}, level::Int, 
 end
 sprof_tree_format(infoa::Vector{Any}, counts::Vector{Int}, level::Int) = sprof_tree_format(infoa, counts, level, tty_cols())
 
-function sprofile_tree(io, bt::Vector{Vector{Uint}}, counts::Vector{Int}, level::Int, doCframes::Bool)
-    umatched = falses(length(counts))
-    len = Int[length(x) for x in bt]
-    infoa = Array(Any, 0)
-    keepa = Array(BitArray, 0)
-    n = Array(Int, 0)
-    while !all(umatched)
-        ind = findfirst(!umatched)
-        pattern = bt[ind][1:level+1]
-        matched = sprof_treematch(bt, counts, pattern)
-        push!(infoa, sprofile_lookup(pattern[end], doCframes))
-        keep = matched & (len .> level+1)
-        push!(keepa, keep)
-        umatched |= matched
-        push!(n, sum(counts[matched]))
+# Print a "branch" starting at a particular level. This gets called recursively.
+function sprofile_tree(io, bt::Vector{Vector{Uint}}, counts::Vector{Int}, level::Int, doCframes::Bool, mergelines::Bool)
+    # Organize captures into groups that are identical up to this level
+    d = Dict{Any, Vector{Int}}()
+    local key
+    for i = 1:length(bt)
+        thisbt = bt[i][level+1]
+        if mergelines
+            key = sprofile_lookup(thisbt, doCframes)
+        else
+            key = thisbt
+        end
+        indx = ht_keyindex(d, key)
+        if indx == -1
+            d[key] = [i]
+        else
+            push!(d.vals[indx], i)
+        end
     end
+    # Generate the counts and code lookups (if we don't already have them)
+    infoa = Array(Any, length(d))
+    group = Array(Vector{Int}, length(d))
+    n = Array(Int, length(d))
+    i = 1
+    for (k,v) in d
+        if mergelines
+            infoa[i] = k
+        else
+            infoa[i] = sprofile_lookup(k, doCframes)
+        end
+        group[i] = v
+        n[i] = sum(counts[v])
+        i += 1
+    end
+    # Order them
     p = sprof_sortorder(infoa)
     infoa = infoa[p]
-    keepa = keepa[p]
+    group = group[p]
     n = n[p]
+    # Generate the string for each line
     strs = sprof_tree_format(infoa, n, level)
+    # Recurse to the next level
+    len = Int[length(x) for x in bt]
     for i = 1:length(infoa)
         if !isempty(strs[i])
             println(io, strs[i])
         end
-        keep = keepa[i]
+        idx = group[i]
+        keep = len[idx] .> level+1
         if any(keep)
-            sprofile_tree(io, bt[keep], counts[keep], level+1, doCframes)
+            idx = idx[keep]
+            sprofile_tree(io, bt[idx], counts[idx], level+1, doCframes, mergelines)
         end
     end
 end
 
-function sprofile_tree(io::IO, doCframes::Bool)
+function sprofile_tree(io::IO, doCframes::Bool, mergelines::Bool)
     bt, counts = sprof_tree()
     level = 0
     len = Int[length(x) for x in bt]
     keep = len .> 0
-    sprofile_tree(io, bt[keep], counts[keep], level, doCframes)
+    sprofile_tree(io, bt[keep], counts[keep], level, doCframes, mergelines)
 end
-sprofile_tree(io::IO) = sprofile_tree(io, false)
-sprofile_tree(doCframes::Bool) = sprofile_tree(OUTPUT_STREAM, doCframes)
-sprofile_tree() = sprofile_tree(OUTPUT_STREAM, false)
+sprofile_tree(io::IO) = sprofile_tree(io, false, true)
+sprofile_tree(doCframes::Bool, mergelines::Bool) = sprofile_tree(OUTPUT_STREAM, doCframes, mergelines)
+sprofile_tree() = sprofile_tree(OUTPUT_STREAM)
 
 ## Use this to profile code
 macro sprofile(ex)
@@ -276,6 +302,7 @@ function truncto(str::ASCIIString, w::Int)
     ret
 end
 
+# Order alphabetically (file, function) and then by line number
 function sprof_sortorder(bt::Vector{Any})
     comb = Array(ASCIIString, length(bt))
     for i = 1:length(bt)
@@ -286,5 +313,5 @@ function sprof_sortorder(bt::Vector{Any})
             comb[i] = "zzz"
         end
     end
-    p = sortperm(comb)
+    sortperm(comb)
 end
