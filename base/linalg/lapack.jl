@@ -54,7 +54,7 @@ for (gbtrf, gbtrs, elty) in
         # *     .. Array Arguments ..
         #       INTEGER            IPIV( * )
         #       DOUBLE PRECISION   AB( LDAB, * )
-        function gbtrf!(kl::Integer, ku::Integer, m::Integer, AB::StridedMatrix{$elty})
+        function gbtrf!(kl::BlasInt, ku::BlasInt, m::BlasInt, AB::StridedMatrix{$elty})
             chkstride1(AB)
             info = Array(BlasInt, 1)
             n    = size(AB, 2)
@@ -74,7 +74,7 @@ for (gbtrf, gbtrs, elty) in
         # *     .. Array Arguments ..
         #       INTEGER            IPIV( * )
         #       DOUBLE PRECISION   AB( LDAB, * ), B( LDB, * )
-        function gbtrs!(trans::BlasChar, kl::Integer, ku::Integer, m::Integer,
+        function gbtrs!(trans::BlasChar, kl::BlasInt, ku::BlasInt, m::BlasInt,
                         AB::StridedMatrix{$elty}, ipiv::Vector{BlasInt},
                         B::StridedVecOrMat{$elty})
             chkstride1(AB, B)
@@ -909,7 +909,7 @@ for (orglq, orgqr, ormlq, ormqr, gemqrt, elty) in
         #       INTEGER            INFO, K, LDA, LWORK, M, N
         # *     .. Array Arguments ..
         #       DOUBLE PRECISION   A( LDA, * ), TAU( * ), WORK( * )
-        function orglq!(A::StridedMatrix{$elty}, tau::Vector{$elty}, k::Integer)
+        function orglq!(A::StridedMatrix{$elty}, tau::Vector{$elty}, k::BlasInt)
             chkstride1(A)
             work  = Array($elty, 1)
             lwork = blas_int(-1)
@@ -963,7 +963,7 @@ for (orglq, orgqr, ormlq, ormqr, gemqrt, elty) in
         #      .. Array Arguments ..
         #      DOUBLE PRECISION   A( LDA, * ), C( LDC, * ), TAU( * ), WORK( * )
         function ormlq!(side::BlasChar, trans::BlasChar, A::StridedMatrix{$elty},
-                        k::Integer, tau::Vector{$elty}, C::StridedVecOrMat{$elty})
+                        k::BlasInt, tau::Vector{$elty}, C::StridedVecOrMat{$elty})
             chkstride1(A, C)
             m     = size(C, 1)
             n     = size(C, 2) # m, n = size(C) won't work if C is a Vector
@@ -1328,7 +1328,7 @@ for (stev, stebz, stegr, elty) in
             if info[1] != 0 throw(LAPACKException(info[1])) end
             dv, Zmat
         end
-        function stebz!(range::Char, order::Char, vl::$elty, vu::$elty, il::Integer, iu::Integer, abstol::Real, dv::Vector{$elty}, ev::Vector{$elty})
+        function stebz!(range::Char, order::Char, vl::$elty, vu::$elty, il::BlasInt, iu::BlasInt, abstol::Real, dv::Vector{$elty}, ev::Vector{$elty})
             n = length(dv)
             if length(ev) != (n-1) throw(LapackDimMisMatch("stebz!")) end
             m = Array(BlasInt,1)
@@ -1354,7 +1354,7 @@ for (stev, stebz, stegr, elty) in
                 if info[1] != 0 throw(LapackException(info[1])) end
             w[1:m[1]], iblock[1:m[1]], isplit[1:nsplit[1]], info[1]
         end
-        function stegr!(jobz::BlasChar, range::BlasChar, dv::Vector{$elty}, ev::Vector{$elty}, vl::Real, vu::Real, il::Integer, iu::Integer, abstol::Real)
+        function stegr!(jobz::BlasChar, range::BlasChar, dv::Vector{$elty}, ev::Vector{$elty}, vl::Real, vu::Real, il::BlasInt, iu::BlasInt, abstol::Real)
             n = length(dv)
             if length(ev) != (n-1) throw(LapackDimMisMatch("stebz!")) end
             eev = [ev, zero($elty)]
@@ -1597,7 +1597,7 @@ for (syevr, elty) in
     ((:dsyevr_,:Float64),
      (:ssyevr_,:Float32))
     @eval begin
-        function syevr!(jobz::BlasChar, range::BlasChar, uplo::BlasChar, A::StridedMatrix{$elty}, vl::FloatingPoint, vu::FloatingPoint, il::Integer, iu::Integer, abstol::FloatingPoint)
+        function syevr!(jobz::BlasChar, range::BlasChar, uplo::BlasChar, A::StridedMatrix{$elty}, vl::FloatingPoint, vu::FloatingPoint, il::BlasInt, iu::BlasInt, abstol::FloatingPoint)
         #       SUBROUTINE DSYEVR( JOBZ, RANGE, UPLO, N, A, LDA, VL, VU, IL, IU,
         #      $                   ABSTOL, M, W, Z, LDZ, ISUPPZ, WORK, LWORK,
         #      $                   IWORK, LIWORK, INFO )
@@ -1660,7 +1660,7 @@ for (syevr, elty, relty) in
     ((:zheevr_,:Complex128,:Float64),
      (:cheevr_,:Complex64,:Float32))
     @eval begin
-        function syevr!(jobz::BlasChar, range::BlasChar, uplo::BlasChar, A::StridedMatrix{$elty}, vl::FloatingPoint, vu::FloatingPoint, il::Integer, iu::Integer, abstol::FloatingPoint)
+        function syevr!(jobz::BlasChar, range::BlasChar, uplo::BlasChar, A::StridedMatrix{$elty}, vl::FloatingPoint, vu::FloatingPoint, il::BlasInt, iu::BlasInt, abstol::FloatingPoint)
 #       SUBROUTINE ZHEEVR( JOBZ, RANGE, UPLO, N, A, LDA, VL, VU, IL, IU,
 #      $                   ABSTOL, M, W, Z, LDZ, ISUPPZ, WORK, LWORK,
 #      $                   RWORK, LRWORK, IWORK, LIWORK, INFO )
@@ -1803,7 +1803,7 @@ for (gehrd, elty) in
      (:zgehrd_,:Complex128),
      (:cgehrd_,:Complex64))
     @eval begin
-        function gehrd!(ilo::Integer, ihi::Integer, A::StridedMatrix{$elty})
+        function gehrd!(ilo::BlasInt, ihi::BlasInt, A::StridedMatrix{$elty})
 #                 .. Scalar Arguments ..
 #       INTEGER            IHI, ILO, INFO, LDA, LWORK, N
 # *     ..
@@ -1843,7 +1843,7 @@ for (orghr, elty) in
      (:zunghr_,:Complex128),
      (:cunghr_,:Complex64))
     @eval begin
-        function orghr!(ilo::Integer, ihi::Integer, A::StridedMatrix{$elty}, tau::StridedVector{$elty})
+        function orghr!(ilo::BlasInt, ihi::BlasInt, A::StridedMatrix{$elty}, tau::StridedVector{$elty})
 # *     .. Scalar Arguments ..
 #       INTEGER            IHI, ILO, INFO, LDA, LWORK, N
 # *     ..
@@ -2006,7 +2006,7 @@ for (fn, elty) in ((:dpftrf_, :Float64),
                    (:cpftrf_, :Complex64))
     @eval begin
         function pftrf!(transr::Char, uplo::Char, A::StridedVector{$elty})
-            n = int(div(sqrt(8length(A)), 2))
+            n = blas_int(div(sqrt(8length(A)), 2))
             info = Array(BlasInt, 1)
             ccall(($(string(fn)), liblapack), Void,
                 (Ptr{Uint8}, Ptr{Uint8}, Ptr{BlasInt}, Ptr{$elty},
