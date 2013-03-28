@@ -124,6 +124,8 @@ export
     Bool, FloatingPoint, Float32, Float64, Number, Integer, Int, Int8, Int16,
     Int32, Int64, Int128, Ptr, Real, Signed, Uint, Uint8, Uint16, Uint32,
     Uint64, Uint128, Unsigned,
+    # vector types
+    VecFloat64,
     # string types
     Char, ASCIIString, ByteString, DirectIndexString, String, UTF8String,
     # errors
@@ -188,6 +190,8 @@ bitstype 64  Int64   <: Signed
 bitstype 64  Uint64  <: Unsigned
 bitstype 128 Int128  <: Signed
 bitstype 128 Uint128 <: Unsigned
+
+bitstype 256 VecFloat64
 
 if is(Int,Int64)
     typealias Uint Uint64

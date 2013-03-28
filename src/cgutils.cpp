@@ -67,6 +67,7 @@ static Type *julia_type_to_llvm(jl_value_t *jt)
     if (jt == (jl_value_t*)jl_bool_type) return T_int1;
     if (jt == (jl_value_t*)jl_float32_type) return T_float32;
     if (jt == (jl_value_t*)jl_float64_type) return T_float64;
+    if (jt == (jl_value_t*)jl_vecfloat64_type) return T_vecfloat64;
     if (jl_is_cpointer_type(jt)) {
         Type *lt = julia_type_to_llvm(jl_tparam0(jt));
         if (lt == NULL)
@@ -135,6 +136,7 @@ static jl_value_t *llvm_type_to_julia(Type *t, bool throw_error)
     if (t == T_int64) return (jl_value_t*)jl_int64_type;
     if (t == T_float32) return (jl_value_t*)jl_float32_type;
     if (t == T_float64) return (jl_value_t*)jl_float64_type;
+    if (t == T_vecfloat64) return (jl_value_t*)jl_vecfloat64_type;
     if (t == T_void) return (jl_value_t*)jl_bottom_type;
     if (t == jl_pvalue_llvmt)
         return (jl_value_t*)jl_any_type;
@@ -783,6 +785,7 @@ static Value *boxed(Value *v, jl_value_t *jt)
 #endif
         return init_bits_value(newv, literal_pointer_val(jt), t, v);
     }
+    if (jb == jl_vecfloat64_type) return builder.CreateCall(box_vecfloat64_func, v);
     if (jb == jl_uint8_type)
         return builder.CreateCall(box_uint8_func,
                                   builder.CreateZExt(v, T_int32));

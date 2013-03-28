@@ -387,6 +387,7 @@ extern jl_datatype_t *jl_int64_type;
 extern jl_datatype_t *jl_uint64_type;
 extern jl_datatype_t *jl_float32_type;
 extern jl_datatype_t *jl_float64_type;
+extern jl_datatype_t *jl_vecfloat64_type;
 extern jl_datatype_t *jl_voidpointer_type;
 extern jl_datatype_t *jl_pointer_type;
 

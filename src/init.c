@@ -634,6 +634,8 @@ void jl_get_builtin_hooks(void)
     jl_float32_type = (jl_datatype_t*)core("Float32");
     jl_float64_type = (jl_datatype_t*)core("Float64");
 
+    jl_vecfloat64_type = (jl_datatype_t*)core("VecFloat64");
+
     jl_stackovf_exception =
         jl_apply((jl_function_t*)core("StackOverflowError"), NULL, 0);
     jl_divbyzero_exception =

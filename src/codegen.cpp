@@ -100,6 +100,8 @@ static Type *T_float32;
 static Type *T_pfloat32;
 static Type *T_float64;
 static Type *T_pfloat64;
+static Type *T_vecfloat64;
+static Type *T_pvecfloat64;
 static Type *T_void;
 
 // constants
@@ -154,6 +156,7 @@ static Function *box_int64_func;
 static Function *box_uint64_func;
 static Function *box_float32_func;
 static Function *box_float64_func;
+static Function *box_vecfloat64_func;
 static Function *box8_func;
 static Function *box16_func;
 static Function *box32_func;
@@ -2768,6 +2771,7 @@ static void init_julia_llvm_env(Module *m)
     T_pfloat32 = PointerType::get(T_float32, 0);
     T_float64 = Type::getDoubleTy(getGlobalContext());
     T_pfloat64 = PointerType::get(T_float64, 0);
+    T_vecfloat64 = VectorType::get(T_float64, 4);
     T_void = Type::getVoidTy(jl_LLVMContext);
 
     // add needed base definitions to our LLVM environment
