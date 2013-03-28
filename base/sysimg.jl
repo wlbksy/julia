@@ -78,6 +78,9 @@ include("set.jl")
 import Core.Undef  # used internally by compiler
 include("inference.jl")
 
+# system constants
+include("sys_h.jl")
+
 # I/O, strings & printing
 include("io.jl")
 include("iobuffer.jl")

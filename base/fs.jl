@@ -20,25 +20,12 @@ export File,
        # close,
        # write,
        unlink,
-       JL_O_WRONLY,
-       JL_O_RDONLY,
-       JL_O_RDWR,
-       JL_O_APPEND,
-       JL_O_CREAT,
-       JL_O_EXCL,
-       JL_O_TRUNC,
-       JL_O_TEMPORARY,
-       JL_O_SHORT_LIVED,
-       JL_O_SEQUENTIAL,
-       JL_O_RANDOM,
        S_IRUSR, S_IWUSR, S_IXUSR, S_IRWXU,
        S_IRGRP, S_IWGRP, S_IXGRP, S_IRWXG,
        S_IROTH, S_IWOTH, S_IXOTH, S_IRWXO
 
 #import Base.show, Base.open, Base.close, Base.write
 import Base.uvtype, Base.uvhandle, Base.eventloop
-
-include("file_constants.jl")
 
 abstract AbstractFile <: IO
 

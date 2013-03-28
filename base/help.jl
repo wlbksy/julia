@@ -29,6 +29,8 @@ end
 function helpdb_filename()
     root = "$JULIA_HOME/../share/julia"
     file = "helpdb.jl"
+    loc = Base.locale()
+    locs = [loc, split(loc,'.')[1]]
     for loc in [Base.locale()]
         fn = joinpath(root, loc, file)
         if isfile(fn)

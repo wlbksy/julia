@@ -2,20 +2,19 @@ module I18n
 
 export locale
 
-LOCALE = nothing
 CALLBACKS = Function[]
 
+function setlocale(category::Integer, locale::Union(ASCIIString,Ptr{None}))
+    p = ccall(:setlocale, Ptr{Uint8}, (Int32, Ptr{Uint8}), category, locale)
+    p == C_NULL ? p : bytestring(p)
+end
+
 function locale()
-    if LOCALE === nothing
-        # XXX:TBD return default locale
-        return ""
-    end
-    LOCALE
+    setlocale(Base.JL_LC_CTYPE, C_NULL)
 end
 
 function locale(s::ByteString)
-    global LOCALE = s
-    # XXX:TBD call setlocale
+    setlocale(Base.JL_LC_ALL, s) == C_NULL && error("bad locale '$s'")
     for cb in CALLBACKS
         cb()
     end
