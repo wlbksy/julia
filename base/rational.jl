@@ -66,9 +66,11 @@ end
 convert{T<:Integer}(rt::Type{Rational{T}}, x::FloatingPoint) = convert(rt,x,eps(one(x)))
 convert(::Type{Rational}, x::FloatingPoint, tol::Real) = convert(Rational{Int},x,tol)
 convert(::Type{Rational}, x::FloatingPoint) = convert(Rational{Int},x,eps(one(x)))
+convert(::Type{Rational}, x::Integer) = convert(Rational{typeof(x)},x)
 convert(::Type{Bool}, x::Rational) = (x!=0)  # to resolve ambiguity
+
 convert{T<:Rational}(::Type{T}, x::Rational) = x
-convert{T<:Real}(::Type{T}, x::Rational) = convert(T, x.num/x.den)
+convert{T<:Real}(::Type{T}, x::Rational) = convert(T,x.num)/convert(T,x.den)
 
 promote_rule{T<:Integer}(::Type{Rational{T}}, ::Type{T}) = Rational{T}
 promote_rule{T<:Integer,S<:Integer}(::Type{Rational{T}}, ::Type{S}) = Rational{promote_type(T,S)}
@@ -161,3 +163,5 @@ function ^(x::Rational, y::Integer)
 end
 
 ^(x::Number, y::Rational) = x^(y.num/y.den)
+^{T<:FloatingPoint}(x::T, y::Rational) = x^(convert(T,y.num)/y.den)
+^{T<:FloatingPoint}(x::Complex{T}, y::Rational) = x^(convert(T,y.num)/y.den)

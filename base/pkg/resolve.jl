@@ -60,12 +60,14 @@ end
 
 function ReqsStruct(reqs::Vector{VersionSet}, vers::Vector{Version}, deps::Vector{(Version,VersionSet)})
     pkgs = Set{String}()
-    for r in reqs add!(pkgs, r.package) end
     for v in vers add!(pkgs, v.package) end
-    for d in deps
-        add!(pkgs, d[1].package)
-        add!(pkgs, d[2].package)
+
+    for r in reqs
+        if !contains(pkgs, r.package)
+            throw(MetadataError("required package $(r.package) has no version compatible with fixed requirements"))
+        end
     end
+
     ReqsStruct(reqs, sort!(collect(pkgs)), vers, deps)
 end
 
@@ -998,14 +1000,13 @@ function compute_output_dict(reqsstruct::ReqsStruct, pkgstruct::PkgStruct, sol::
     pvers = pkgstruct.pvers
     spp = pkgstruct.spp
 
-    want = (String=>ASCIIString)[]
+    want = (String=>VersionNumber)[]
     for p0 = 1:np
         p = pkgs[p0]
         s = sol[p0]
         if s != spp[p0]
             v = pvers[p0][s]
-            want[p] = readchomp("METADATA/$p/versions/$v/sha1")
-            #want[p] = "$v"
+            want[p] = v
         end
     end
 
@@ -1196,7 +1197,7 @@ function resolve(reqs::Vector{VersionSet}, vers::Vector{Version}, deps::Vector{(
 end
 
 # Build a subgraph incuding only the (direct and indirect) dependencies
-# of a given package (used in check_sanity)
+# of a given package (used in sanity_check)
 function substructs(reqsstruct0::ReqsStruct, pkgstruct0::PkgStruct, pdeps::Vector, v::Version)
 
     pkgs = reqsstruct0.pkgs
@@ -1210,8 +1211,8 @@ function substructs(reqsstruct0::ReqsStruct, pkgstruct0::PkgStruct, pdeps::Vecto
 
     p = v.package
     vn = v.version
-    nvn = deepcopy(vn)
-    nvn.patch += 1
+    nvn = VersionNumber(vn.major, vn.minor, vn.patch + 1, vn.prerelease, vn.build)
+
     reqs = [VersionSet(p, [vn, nvn])]
 
     p0 = pdict[p]
@@ -1222,7 +1223,9 @@ function substructs(reqsstruct0::ReqsStruct, pkgstruct0::PkgStruct, pdeps::Vecto
         for p0 in staged
             for w in pdeps[p0], vs in w
                 p1 = pdict[vs.package]
-                add!(staged_next, p1)
+                if !contains(pset, p1)
+                    add!(staged_next, p1)
+                end
             end
         end
         pset = union(pset, staged_next)
@@ -1256,8 +1259,8 @@ function substructs(reqsstruct0::ReqsStruct, pkgstruct0::PkgStruct, pdeps::Vecto
 end
 
 # Scan dependencies for (explicit or implicit) contradictions
-function sanity_check()
-    reqsstruct0 = ReqsStruct(VersionSet[])
+function sanity_check(vers::Vector{Version}, deps::Vector{(Version,VersionSet)})
+    reqsstruct0 = ReqsStruct(VersionSet[], vers, deps)
     pkgstruct0 = PkgStruct(reqsstruct0)
 
     eq_classes_map = prune_versions!(reqsstruct0, pkgstruct0, false)
@@ -1300,7 +1303,6 @@ function sanity_check()
     svers = sort(vers, Sort.By(vrank))
 
     nv = length(svers)
-    nnzv = findfirst(v->vrank(v)==0, svers) - 1
 
     svdict = (Version=>Int)[]
     i = 1
@@ -1323,56 +1325,37 @@ function sanity_check()
         if checked[i]
             i += 1
             continue
-        elseif vr == 1
-            p0, v0 = vdict[v]
-            vs = pdeps[p0][v0][1]
-            p1 = pdict[vs.package]
-            found = false
-            for vn in pvers[p1]
-                if contains(vs, Version(vs.package, vn))
-                    found = true
-                    break
+        end
+        reqsstruct, pkgstruct = substructs(reqsstruct0, pkgstruct0, pdeps, v)
+
+        graph = Graph(reqsstruct, pkgstruct)
+        msgs = Messages(reqsstruct, pkgstruct, graph)
+
+        red_pkgs = reqsstruct.pkgs
+        red_np = reqsstruct.np
+        red_spp = pkgstruct.spp
+        red_pvers = pkgstruct.pvers
+
+        local sol::Vector{Int}
+        try
+            sol = converge(graph, msgs)
+            verify_sol(reqsstruct, pkgstruct, sol)
+
+            for p0 = 1:red_np
+                s0 = sol[p0]
+                if s0 != red_spp[p0]
+                    j = svdict[Version(red_pkgs[p0], red_pvers[p0][s0])]
+                    checked[j] = true
                 end
             end
-            if !found
-                pp = vs.package
-                push!(insane_ids, (p0,v0))
+            checked[i] = true
+        catch err
+            if isa(err, UnsatError)
+                pp = red_pkgs[err.info]
+                push!(insane_ids, vdict[v])
                 push!(problematic_pkgs, pp)
             else
-                checked[i] = true
-            end
-        else
-            reqsstruct, pkgstruct = substructs(reqsstruct0, pkgstruct0, pdeps, v)
-
-            graph = Graph(reqsstruct, pkgstruct)
-            msgs = Messages(reqsstruct, pkgstruct, graph)
-
-            red_pkgs = reqsstruct.pkgs
-            red_np = reqsstruct.np
-            red_spp = pkgstruct.spp
-            red_pvers = pkgstruct.pvers
-
-            local sol::Vector{Int}
-            try
-                sol = converge(graph, msgs)
-                verify_sol(reqsstruct, pkgstruct, sol)
-
-                for p0 = 1:red_np
-                    s0 = sol[p0]
-                    if s0 != red_spp[p0]
-                        j = svdict[Version(red_pkgs[p0], red_pvers[p0][s0])]
-                        checked[j] = true
-                    end
-                end
-                checked[i] = true
-            catch err
-                if isa(err, UnsatError)
-                    pp = red_pkgs[err.info]
-                    push!(insane_ids, vdict[v])
-                    push!(problematic_pkgs, pp)
-                else
-                    rethrow(err)
-                end
+                rethrow(err)
             end
         end
         i += 1

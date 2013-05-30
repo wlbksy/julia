@@ -14,6 +14,14 @@ type IOBuffer <: IO
         new(data,readable,writable,seekable,append,length(data),maxsize,1)
 end
 
+function copy(b::IOBuffer) 
+    ret = IOBuffer(b.writeable?copy(b.data):b.data,
+            b.readable,b.writable,b.seekable,b.append,b.maxsize)
+    ret.size = b.size
+    ret.ptr  = b.ptr
+    ret
+end
+
 # PipeBuffers behave like Unix Pipes. They are readable and writable, the act appendable, and not seekable.
 PipeBuffer(data::Vector{Uint8},maxsize::Int) = IOBuffer(data,true,true,false,true,maxsize)
 PipeBuffer(data::Vector{Uint8}) = PipeBuffer(data,typemax(Int))
@@ -37,7 +45,7 @@ function read{T}(from::IOBuffer, a::Array{T})
         if nb > nb_available(from)
             throw(EOFError())
         end
-        ccall(:memcpy, Void, (Ptr{Void}, Ptr{Void}, Int), a, pointer(from.data,from.ptr), nb)
+        ccall(:memcpy, Ptr{Void}, (Ptr{Void}, Ptr{Void}, Uint), a, pointer(from.data,from.ptr), nb)
         from.ptr += nb
         return a
     else
@@ -54,6 +62,14 @@ function read(from::IOBuffer, ::Type{Uint8})
     from.ptr += 1
     return byte
 end
+
+function peek(from::IOBuffer)
+    if !from.readable error("read failed") end
+    if from.ptr > from.size
+        throw(EOFError())
+    end
+    return from.data[from.ptr]
+end    
 
 read{T}(from::IOBuffer, ::Type{Ptr{T}}) = convert(Ptr{T}, read(from, Uint))
 
@@ -87,7 +103,7 @@ end
 function compact(io::IOBuffer)
     if !io.writable error("compact failed") end 
     if io.seekable error("compact failed") end
-    ccall(:memmove, Void, (Ptr{Void},Ptr{Void},Int), io.data, pointer(io.data,io.ptr), nb_available(io))
+    ccall(:memmove, Ptr{Void}, (Ptr{Void},Ptr{Void},Uint), io.data, pointer(io.data,io.ptr), nb_available(io))
     io.size -= io.ptr - 1
     io.ptr = 1
     return true
@@ -161,7 +177,7 @@ function write(to::IOBuffer, p::Ptr, nb::Integer)
     ensureroom(to, nb)
     ptr = (to.append ? to.size+1 : to.ptr)
     nb = min(nb, length(to.data) - ptr + 1)
-    ccall(:memcpy, Void, (Ptr{Void}, Ptr{Void}, Int), pointer(to.data,ptr), p, nb)
+    ccall(:memcpy, Ptr{Void}, (Ptr{Void}, Ptr{Void}, Uint), pointer(to.data,ptr), p, nb)
     to.size = max(to.size, ptr - 1 + nb)
     if !to.append; to.ptr += nb; end
     nb
